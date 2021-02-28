@@ -2,17 +2,15 @@ CXX = g++
 CPPFLAGS = -std=c++14 -MMD -MP -g
 PROTOBUF = `pkg-config --cflags protobuf`
 PROTOBUFL = `pkg-config --libs protobuf`
+LD_FLAGS = -L/usr/local/lib
 ROOTCONFIG =
 ROOTCONFIG2 = `root-config --cflags --glibs`
-BLASDIR = /Users/sitongan/rootdev/BLAS-3.8.0
-BLASFLAG = -L${BLASDIR} -lblas
+BLASDIR = /usr/include/openblas
+BLASFLAG = -L${BLASDIR} -lopenblas
 SRC = ${wildcard *.cxx}
-SOFIEOBEJCT =
-SOFIEHEADER =
-SOFIE = $(SOFIEOBEJCT) $(SOFIEHEADER)
 
 prototype: ${SRC:%.cxx=%.o}
-	${CXX} -o prototype $^ ${CPPFLAGS} $(BLASFLAG) $(ROOTCONFIG) $(PROTOBUFL) 
+	${CXX} -o prototype $^ ${CPPFLAGS} $(BLASFLAG) $(ROOTCONFIG) $(PROTOBUFL) $(LD_FLAGS)
 
 
 -include $(SRC:%.cxx=%.d)
