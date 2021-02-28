@@ -1,0 +1,3 @@
+Makefile merge=ours
+onnx.proto3.pb.h merge=ours
+onnx.proto3.pb.cxx merge=ours
