@@ -7,6 +7,8 @@
 #include <memory>
 #include <ctime>
 #include <set>
+#include <iomanip>
+#include <fstream>
 
 #include "SOFIE_common.hxx"
 #include "ROperator.hxx"
@@ -24,6 +26,7 @@ private:
    std::unordered_map<std::string, TensorInfo> fReadyInputTensorInfos;
    std::unordered_map<std::string, InitializedTensor> fInitializedTensors;
    std::unordered_map<std::string, TensorInfo> fIntermediateTensorInfos;
+   std::vector<std::string> fOutputTensorNames;
 
    std::vector<std::unique_ptr<ROperator>> fOperators;
 
@@ -36,7 +39,7 @@ private:
    bool fNeedGemm = true;
 
    const std::vector<std::string> fAllowedStdLib = {"algorithm"};
-   std::set<std::string> fNeededStdLib;
+   std::set<std::string> fNeededStdLib = {"vector"};
 
 
 
@@ -68,6 +71,9 @@ public:
          if ( i == libname) fNeededStdLib.insert(libname);
       }
    }
+   void AddOutputTensorNameList(std::vector<std::string> outputtensornames){
+      fOutputTensorNames = outputtensornames;
+   }
    void UpdateInitializedTensor(std::string tensor_name, ETensorType type, std::vector<std::size_t> shape, std::shared_ptr<void> data);
    std::shared_ptr<void> GetInitializedTensorData(std::string tensor_name);
 
@@ -79,6 +85,7 @@ public:
       std::cout << fGC;
    }
    void PrintIntermediateTensors();
+   void OutputGenerated(std::string filename = "");
 
 
 /*

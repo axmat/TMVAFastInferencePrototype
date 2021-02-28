@@ -131,9 +131,10 @@ namespace SOFIE{
                auto original_data = model.GetInitializedTensorData(fNC);
                if (fType == "float"){
                   std::vector<float>* new_data = new std::vector<float>((UTILITY::Unidirectional_broadcast<float>(static_cast<float*>(original_data.get()), fShapeC, fShapeY)));
-                  std::shared_ptr<void> new_data_ptr(new_data->data(), free);
+                  std::shared_ptr<void> new_data_ptr(new_data->data(), std::default_delete<float[]>());
 
                   model.UpdateInitializedTensor(fNC, model.GetTensorType(fNC), fShapeY, new_data_ptr);
+                  fShapeC = fShapeY;
                }
             }
          }
@@ -156,13 +157,16 @@ namespace SOFIE{
          std::stringstream out;
          out <<"\t" << "char " << OpName << "_transA = " << (fAttrTransA ? "\'t\'" : "\'n\'") << ";\n";
          out <<"\t" << "char " << OpName << "_transB = " << (fAttrTransB ? "\'t\'" : "\'n\'") << ";\n";
-         out <<"\t" << "int " << OpName << "_m = " << fShapeA[0] << ";\n";
-         out <<"\t" << "int " << OpName << "_n = " << fShapeB[1] << ";\n";
-         out <<"\t" << "int " << OpName << "_k = " << fShapeA[1] << ";\n";
+         int m = (fAttrTransA ? fShapeA[1] : fShapeA[0]);
+         int n = (fAttrTransB ? fShapeB[0] : fShapeB[1]);
+         int k = (fAttrTransA ? fShapeA[0] : fShapeA[1]);
+         out <<"\t" << "int " << OpName << "_m = " << m << ";\n";
+         out <<"\t" << "int " << OpName << "_n = " << n << ";\n";
+         out <<"\t" << "int " << OpName << "_k = " << k << ";\n";
          out <<"\t" << "float " << OpName << "_alpha = " << std::setprecision(std::numeric_limits<float>::max_digits10) << fAttrAlpha << ";\n";
          out <<"\t" << "float " << OpName << "_beta = " << std::setprecision(std::numeric_limits<float>::max_digits10) << fAttrBeta << ";\n";
-         out <<"\t" << "int " << OpName << "_lda = " << (fAttrTransA ? fShapeA[0] : fShapeA[1]) << ";\n";
-         out <<"\t" << "int " << OpName << "_ldb = " << (fAttrTransB ? fShapeA[1] : fShapeB[1]) << ";\n";
+         out <<"\t" << "int " << OpName << "_lda = " << (fAttrTransA ? m : k) << ";\n";
+         out <<"\t" << "int " << OpName << "_ldb = " << (fAttrTransB ? k : n) << ";\n";
          if (fNC != ""){
             int length = 1;
             for (auto& i: fShapeC){
@@ -173,7 +177,7 @@ namespace SOFIE{
          if (fType == "float"){
             out << "\t" << "BLAS::sgemm_(&" << OpName << "_transB, &" << OpName << "_transA, &" << OpName
              << "_n, &" << OpName << "_m, &" << OpName << "_k, &" << OpName << "_alpha, " << "tensor_" << fNB
-             << ", &" << OpName << "_ldb, " << "tensor_" << fNA << ", &" << OpName << "_beta, " << "tensor_" << fNY << ", &"
+             << ", &" << OpName << "_ldb, " << "tensor_" << fNA << ", &" << OpName << "_lda, &" << OpName << "_beta, " << "tensor_" << fNY << ", &"
              << OpName << "_n);\n";
           }
 

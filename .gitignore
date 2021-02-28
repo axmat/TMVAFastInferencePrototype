@@ -3,6 +3,6 @@ test/*
 .DS_Store
 *.o
 *.d
-*.onnx
 prototype
 prototype.dSYM
+testinfer.dSYM
