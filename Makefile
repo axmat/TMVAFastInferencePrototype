@@ -2,15 +2,14 @@ CXX = g++
 CPPFLAGS = -std=c++14 -MMD -MP -g
 PROTOBUF = `pkg-config --cflags protobuf`
 PROTOBUFL = `pkg-config --libs protobuf`
-LD_FLAGS = -L/usr/local/lib
 ROOTCONFIG =
 ROOTCONFIG2 = `root-config --cflags --glibs`
-BLASDIR = /usr/include/openblas
+BLASDIR = /usr/local/opt/openblas/lib
 BLASFLAG = -L${BLASDIR} -lopenblas
 SRC = ${wildcard *.cxx}
 
 prototype: ${SRC:%.cxx=%.o}
-	${CXX} -o prototype $^ ${CPPFLAGS} $(BLASFLAG) $(ROOTCONFIG) $(PROTOBUFL) $(LD_FLAGS)
+	${CXX} -o prototype $^ ${CPPFLAGS} $(BLASFLAG) $(ROOTCONFIG) $(PROTOBUFL)
 
 
 -include $(SRC:%.cxx=%.d)
