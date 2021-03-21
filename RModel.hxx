@@ -1,6 +1,8 @@
 #ifndef TMVA_SOFIE_RMODEL
 #define TMVA_SOFIE_RMODEL
 
+#include <initializer_list>
+#include <string>
 #include <vector>
 #include <unordered_map>
 #include <iostream>
@@ -36,12 +38,20 @@ private:
 
 
    std::string fGC; //generated code
-   bool fNeedGemm = true;
+   //bool fNeedGemm = true;
+   std::set<std::string> fNeededBlasRoutines = {};
 
    const std::vector<std::string> fAllowedStdLib = {"algorithm"};
    std::set<std::string> fNeededStdLib = {"vector"};
 
+public:
+   void AddBlasRoutines(const std::string &routine) { fNeededBlasRoutines.insert(routine);}
+   void AddBlasRoutines(std::initializer_list<std::string> routines) {
+      for (auto &routine : routines) fNeededBlasRoutines.insert(routine);
+      //fNeededBlasRoutines.insert(routine);
+      //AddBlasRoutines(args...);
 
+   }
 
 public:
 

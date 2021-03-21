@@ -11,6 +11,7 @@
 #include <fstream>
 #include <memory>
 #include <ctime>
+#include <unordered_map>
 
 
 namespace TMVA{
@@ -23,13 +24,14 @@ namespace INTERNAL{
 std::unique_ptr<ROperator> make_ROperator_Transpose(const onnx::NodeProto& nodeproto, const onnx::GraphProto& graphproto, std::unordered_map<std::string, ETensorType>& tensor_type);
 std::unique_ptr<ROperator> make_ROperator_Relu(const onnx::NodeProto& nodeproto, const onnx::GraphProto& graphproto, std::unordered_map<std::string, ETensorType>& tensor_type);
 std::unique_ptr<ROperator> make_ROperator_Gemm(const onnx::NodeProto& nodeproto, const onnx::GraphProto& graphproto, std::unordered_map<std::string, ETensorType>& tensor_type);
-
+std::unique_ptr<ROperator> make_ROperator_Conv(const onnx::NodeProto& nodeproto, const onnx::GraphProto& graphproto, std::unordered_map<std::string, ETensorType>& tensor_type);
 
 using factoryMethodMap = std::unordered_map<std::string, std::unique_ptr<ROperator> (*)(const onnx::NodeProto&, const onnx::GraphProto&, std::unordered_map<std::string, ETensorType>&)>;
 const factoryMethodMap mapOptypeOperator = {
       {"Gemm", &make_ROperator_Gemm},
       {"Transpose", &make_ROperator_Transpose},
-      {"Relu", &make_ROperator_Relu}
+      {"Relu", &make_ROperator_Relu},
+      {"Conv", &make_ROperator_Conv}
    };
 
 
@@ -164,6 +166,12 @@ public:
 
       for (int i=0; i < graph.node_size(); i++){
          rmodel.AddOperator(std::move(INTERNAL::make_ROperator(i, graph, tensor_type)));
+         std::string op_type = graph.node(i).op_type();
+         if (op_type == "Gemm") {
+            rmodel.AddBlasRoutines("Gemm");
+         } else if (op_type == "Conv") {
+            rmodel.AddBlasRoutines({"Gemm", "Axpy"});
+         }
       }
 
       std::vector<std::string> outputnames;
