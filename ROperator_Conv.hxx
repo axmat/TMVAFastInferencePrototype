@@ -83,20 +83,15 @@ public:
    }
 
    std::vector<std::vector<size_t>> ShapeInference(std::vector<std::vector<size_t>> input) {
-      size_t inputSize = input.size();
-      if (inputSize < 2 || inputSize > 3 ) {
+      if (input.size() > 3 ) {
          throw
             std::runtime_error("TMVA SOFIE Conv Op Shape inference need 2 or 3 input tensors");
       }
-      for(size_t i = 0; i < 2; i++) {
+      for(size_t i = 0; i < input.size(); i++) {
          if (input[i].size() != 4) {
             throw
                std::runtime_error("TMVA SOFIE Conv Op Shape inference only accept tensor with 4 dimensions");
          }
-      }
-      if (inputSize == 3 && input[2].size() != 1) {
-         throw
-            std::runtime_error("TMVA SOFIE Conv Op Shape inference only accept bias tensor with 1 dimension");
       }
 
       if (fAttrGroup == 0) {
@@ -105,6 +100,7 @@ public:
 
       size_t kHeight = ((fAttrKernelShape.empty())? input[1][2] : fAttrKernelShape[0]);
       size_t kWidth = ((fAttrKernelShape.empty())? input[1][3] : fAttrKernelShape[1]);
+
       if (fAttrDilations.empty()) {
          fAttrDilations = {1, 1};
       }
@@ -133,7 +129,7 @@ public:
       }
 
       size_t outputHeight =
-          (input[0][2] + fAttrPads[0] + fAttrPads[2]- fAttrKernelShape[0] + fAttrStrides[0]) /
+          (input[0][2] + fAttrPads[0] + fAttrPads[2] - fAttrKernelShape[0] + fAttrStrides[0]) /
           fAttrStrides[0];
       size_t outputWidth =
           (input[0][3] + fAttrPads[1] + fAttrPads[3] - fAttrKernelShape[1] + fAttrStrides[1]) /
@@ -174,9 +170,9 @@ public:
             auto original_data = model.GetInitializedTensorData(fNB);
             if (fType == "float") {
                std::vector<float>* new_data = new std::vector<float>((UTILITY::Unidirectional_broadcast<float>(static_cast<float*>(original_data.get()), fShapeB, fShapeY)));
-   std::shared_ptr<void> new_data_ptr(new_data->data(), std::default_delete<float[]>());
-      model.UpdateInitializedTensor(fNB, model.GetTensorType(fNB), fShapeY, new_data_ptr);
-         fShapeB = model.GetTensorShape(fNB);
+               std::shared_ptr<void> new_data_ptr(new_data->data(), std::default_delete<float[]>());
+               model.UpdateInitializedTensor(fNB, model.GetTensorType(fNB), fShapeY, new_data_ptr);
+               fShapeB = model.GetTensorShape(fNB);
             }
          }
       }
@@ -215,15 +211,15 @@ public:
       out << OpName << "_xcol[" << fShapeX[1] * fAttrKernelShape[0] * fAttrKernelShape[1] * fShapeX[0] * fShapeY[2] * fShapeY[3] << "] = {0};\n";
       // Unroll the input tensor
       out << "\t" << "for (size_t g = 0; g < " << fAttrGroup << "; g++) {\n";
-      out << "\t" << "\t" << "size_t " << OpName << "_idx = g * " << fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] << ";\n";
+      out << "\t" << "\t" << "size_t idx = g * " << fShapeW[1] * fAttrKernelShape[0] * fAttrKernelShape[1] << ";\n";
       out << "\t" << "\t" << "for (size_t n = 0; n < " << fShapeX[0] << "; n++) {\n";
       out << "\t" << "\t" << "\t" << "for (size_t c = g * " << fShapeW[1] << "; c < (g + 1) * " << fShapeW[1] << "; c++) {\n";
-      out << "\t" << "\t" << "\t" << "\t" << "for (size_t h = 0; h < " << fShapeX[2] - fAttrKernelShape[0] + 1 << "; h += " << fAttrStrides[0] << ") {\n";
-      out << "\t" << "\t" << "\t" << "\t" << "\t" << "for (size_t w = 0; w < " << fShapeX[3] - fAttrKernelShape[1] + 1 << ";w += " << fAttrStrides[1] << ") {\n";
+      out << "\t" << "\t" << "\t" << "\t" << "for (size_t h = 0; h < " << fShapeX[2] + fAttrPads[0] + fAttrPads[2] - fAttrKernelShape[0] + 1 << "; h += " << fAttrStrides[0] << ") {\n";
+      out << "\t" << "\t" << "\t" << "\t" << "\t" << "for (size_t w = 0; w < " << fShapeX[3] + fAttrPads[1] + fAttrPads[3] - fAttrKernelShape[1] + 1 << ";w += " << fAttrStrides[1] << ") {\n";
       out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "for (size_t x = 0; x < " << fAttrKernelShape[0] << "; x++) {\n";
       out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "for (size_t y = 0; y < " << fAttrKernelShape[1] << "; y++) {\n";
-      out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << OpName << "_xcol[" << OpName << "_idx] = tensor_" << fNX << "[n * " << fShapeX[1] * fShapeX[2] * fShapeX[3] << " + c * " << fShapeX[2] * fShapeX[3] << " + (h + x) * " << fShapeX[3] << " + w + y];\n";
-      out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << OpName << "_idx++;\n";
+      out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << OpName << "_xcol[" << "idx] = " << OpName << "_xpad[n * " <<  fShapeX[1] * (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " + c * " << (fShapeX[2] + fAttrPads[0] + fAttrPads[2]) * (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " + (h + x) * " << (fShapeX[3] + fAttrPads[1] + fAttrPads[3]) << " + w + y];\n";
+      out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "idx++;\n";
       out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "}\n";
       out << "\t" << "\t" << "\t" << "\t" << "\t" << "\t" << "}\n";
       out << "\t" << "\t" << "\t" << "\t" << "\t" << "}\n";
@@ -240,7 +236,6 @@ public:
       // vectorize the (dilated)convolution kernels into a matrix
       out << "\t" << "for (std::size_t k = 0; k < " << fShapeW[0] << "; k++) {\n";
       out << "\t" << "\t" << "for (std::size_t d = 0; d < " << fShapeW[1] << "; d++) {\n";
-      // FIXME bug??
       out << "\t" << "\t" << "\t" << "for (std::size_t h = 0; h < " << fShapeW[2] << "; h++) {\n";
       out << "\t" << "\t" << "\t" << "\t" << "for (std::size_t w = 0; w < " << fShapeW[3] << "; w++) {\n";
       out << "\t" << "\t" << "\t" << "\t" << "\t" << OpName <<  "_f[k + " << "(d * " << fAttrKernelShape[0] * fAttrKernelShape[1] << " + h * " << fAttrDilations[0] * fAttrKernelShape[1] << " + w * " << fAttrDilations[1] << ") * " << fShapeW[0] << "] = tensor_" << fNW << "[k * " << fShapeW[1] * fShapeW[2] * fShapeW[3] << " + d * " << fShapeW[2] * fShapeW[3] << " + h * " << fShapeW[3] << " + w ];\n";
